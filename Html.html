@@ -10,98 +10,49 @@
         select, input, button { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; box-sizing: border-box; }
         button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #0056b3; }
-        #loading { text-align: center; color: #666; }
     </style>
 </head>
 <body>
-
-    <h2>ระบบเบิกวัสดุสำนักงาน (ฟรีระบบปิด)</h2>
-
+    <h2>ระบบเบิกพัสดุสำนักงาน</h2>
     <div class="card">
-        <h3>ฟอร์มขอเบิกวัสดุ</h3>
-        <form id="requisitionForm">
-            <label>เลือกรายการวัสดุ:</label>
-            <select id="itemSelect" required>
-                <option value="">กำลังโหลดข้อมูล...</option>
-            </select>
-
-            <label>จำนวนที่ต้องการเบิก:</label>
-            <input type="number" id="qty" min="1" value="1" required>
-
-            <label>ชื่อผู้เบิก:</label>
-            <input type="text" id="requester" placeholder="ระบุชื่อ-นามสกุล" required>
-
-            <button type="submit" id="submitBtn">ยืนยันการเบิก</button>
-        </form>
-        <p id="statusMsg" style="text-align:center; font-weight:bold;"></p>
+        <h3>ฟอร์มเบิกวัสดุ</h3>
+        <label>เลือกรายการวัสดุ:</label>
+        <select id="itemSelect">
+            <option value="">-- กำลังโหลดข้อมูล... --</option>
+        </select>
+        
+        <label>จำนวนที่ต้องการเบิก:</label>
+        <input type="number" id="qtyInput" min="1" value="1">
+        
+        <button onclick="submitForm()">ยืนยันการเบิก</button>
     </div>
 
     <script>
-        // === วาง URL ของ Google Apps Script ที่ก๊อปปี้มา ตรงนี้ ===
-        const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+        // นำลิงก์ Web App จาก Google Apps Script มาใส่ในเครื่องหมายคำพูดนี้
+        const SCRIPT_URL = "ใส่ลิงก์ Apps Script ของคุณตรงนี้";
 
-        const itemSelect = document.getElementById("itemSelect");
-        const form = document.getElementById("requisitionForm");
-        const statusMsg = document.getElementById("statusMsg");
-
-        // โหลดข้อมูลสินค้าตอนเปิดเว็บ
-        function loadInventory() {
-            fetch(SCRIPT_URL + "?action=getInventory")
-                .then(res => res.json())
-                .then(data => {
-                    itemSelect.innerHTML = '<option value="">-- เลือกรายการวัสดุ --</option>';
-                    data.forEach(item => {
-                        let opt = document.createElement("option");
-                        opt.value = item.ID;
-                        opt.textContent = `${item.ItemName} (เหลือ: ${item.Stock} ชิ้น)`;
-                        itemSelect.appendChild(opt);
-                    });
-                })
-                .catch(err => {
-                    itemSelect.innerHTML = '<option value="">โหลดข้อมูลไม่สำเร็จ</option>';
-                    console.error(err);
-                });
-        }
-
-        loadInventory();
-
-        // ส่งข้อมูลการเบิก
-        form.addEventListener("submit", e => {
-            e.preventDefault();
-            const submitBtn = document.getElementById("submitBtn");
-            submitBtn.disabled = true;
-            statusMsg.textContent = "กำลังบันทึกข้อมูล...";
-            statusMsg.style.color = "blue";
-
-            const payload = {
-                id: itemSelect.value,
-                qty: document.getElementById("qty").value,
-                requester: document.getElementById("requester").value
-            };
-
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            })
+        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+        fetch(SCRIPT_URL)
             .then(res => res.json())
-            .then(res => {
-                if(res.status === "success") {
-                    statusMsg.textContent = "เบิกวัสดุสำเร็จ!";
-                    statusMsg.style.color = "green";
-                    form.reset();
-                    loadInventory(); // รีโหลดสต็อกใหม่
-                } else {
-                    statusMsg.textContent = "ผิดพลาด: " + res.message;
-                    statusMsg.style.color = "red";
-                }
-                submitBtn.disabled = false;
+            .then(data => {
+                const select = document.getElementById("itemSelect");
+                select.innerHTML = '<option value="">-- เลือกรายการวัสดุ --</option>';
+                data.forEach(item => {
+                    select.innerHTML += `<option value="${item}">${item}</option>`;
+                });
             })
             .catch(err => {
-                statusMsg.textContent = "เกิดข้อผิดพลาดในการเชื่อมต่อ";
-                statusMsg.style.color = "red";
-                submitBtn.disabled = false;
+                console.error(err);
+                document.getElementById("itemSelect").innerHTML = '<option value="">-- โหลดข้อมูลไม่สำเร็จ --</option>';
             });
-        });
+
+        function submitForm() {
+            const item = document.getElementById("itemSelect").value;
+            const qty = document.getElementById("qtyInput").value;
+            if(!item) { alert("กรุณาเลือกรายการวัสดุ"); return; }
+            
+            alert("บันทึกการเบิกสำเร็จ: " + item + " จำนวน " + qty);
+        }
     </script>
 </body>
 </html>
