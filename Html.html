@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเบิกวัสดุสำนักงาน</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; max-width: 600px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        select, input, button { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #loading { text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h2>ระบบเบิกวัสดุสำนักงาน (ฟรีระบบปิด)</h2>
+
+    <div class="card">
+        <h3>ฟอร์มขอเบิกวัสดุ</h3>
+        <form id="requisitionForm">
+            <label>เลือกรายการวัสดุ:</label>
+            <select id="itemSelect" required>
+                <option value="">กำลังโหลดข้อมูล...</option>
+            </select>
+
+            <label>จำนวนที่ต้องการเบิก:</label>
+            <input type="number" id="qty" min="1" value="1" required>
+
+            <label>ชื่อผู้เบิก:</label>
+            <input type="text" id="requester" placeholder="ระบุชื่อ-นามสกุล" required>
+
+            <button type="submit" id="submitBtn">ยืนยันการเบิก</button>
+        </form>
+        <p id="statusMsg" style="text-align:center; font-weight:bold;"></p>
+    </div>
+
+    <script>
+        // === วาง URL ของ Google Apps Script ที่ก๊อปปี้มา ตรงนี้ ===
+        const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+
+        const itemSelect = document.getElementById("itemSelect");
+        const form = document.getElementById("requisitionForm");
+        const statusMsg = document.getElementById("statusMsg");
+
+        // โหลดข้อมูลสินค้าตอนเปิดเว็บ
+        function loadInventory() {
+            fetch(SCRIPT_URL + "?action=getInventory")
+                .then(res => res.json())
+                .then(data => {
+                    itemSelect.innerHTML = '<option value="">-- เลือกรายการวัสดุ --</option>';
+                    data.forEach(item => {
+                        let opt = document.createElement("option");
+                        opt.value = item.ID;
+                        opt.textContent = `${item.ItemName} (เหลือ: ${item.Stock} ชิ้น)`;
+                        itemSelect.appendChild(opt);
+                    });
+                })
+                .catch(err => {
+                    itemSelect.innerHTML = '<option value="">โหลดข้อมูลไม่สำเร็จ</option>';
+                    console.error(err);
+                });
+        }
+
+        loadInventory();
+
+        // ส่งข้อมูลการเบิก
+        form.addEventListener("submit", e => {
+            e.preventDefault();
+            const submitBtn = document.getElementById("submitBtn");
+            submitBtn.disabled = true;
+            statusMsg.textContent = "กำลังบันทึกข้อมูล...";
+            statusMsg.style.color = "blue";
+
+            const payload = {
+                id: itemSelect.value,
+                qty: document.getElementById("qty").value,
+                requester: document.getElementById("requester").value
+            };
+
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === "success") {
+                    statusMsg.textContent = "เบิกวัสดุสำเร็จ!";
+                    statusMsg.style.color = "green";
+                    form.reset();
+                    loadInventory(); // รีโหลดสต็อกใหม่
+                } else {
+                    statusMsg.textContent = "ผิดพลาด: " + res.message;
+                    statusMsg.style.color = "red";
+                }
+                submitBtn.disabled = false;
+            })
+            .catch(err => {
+                statusMsg.textContent = "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+                statusMsg.style.color = "red";
+                submitBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
